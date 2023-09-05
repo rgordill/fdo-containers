@@ -26,13 +26,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          path: "buildah-build"
 
       - name: Install latest buildah
         if: matrix.install_latest
         run: |
-          bash buildah-build/.github/install_latest_buildah.sh
+          bash .github/install_latest_buildah.sh
 
       - name: Install qemu dependency
         run: |
@@ -41,13 +39,13 @@ jobs:
 
       - name: Build Image
         id: build_image_multiplatform
-        uses: ./buildah-build/fdo-rendezvous-server/image
+        uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ env.IMAGE_TAG }}
           platforms: ${{ env.PLATFORMS }}
           containerfiles: |
-            ./Containerfile
+            ./fdo-rendezvous-server/image/Containerfile
 
       - name: Echo Outputs
         run: |
