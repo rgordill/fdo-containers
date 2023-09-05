@@ -1,0 +1,64 @@
+name: build multi-arch images
+
+on:
+  # allows to run this workflow manually from the Actions tab
+  push:
+  workflow_dispatch:
+
+jobs:
+  multi:
+    name: Multi-arch fdo-rendenvous-server container build
+
+    env:
+      IMAGE_NAME: fdo-rendezvous-server
+      IMAGE_TAG: latest
+      REGISTRY_ORG: quay.io/rgordill
+      # list of architectures for build
+      PLATFORMS: linux/amd64,linux/arm64
+
+    strategy:
+      fail-fast: false
+      matrix:
+        install_latest: [ true, false ]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: "buildah-build"
+
+      - name: Install latest buildah
+        if: matrix.install_latest
+        run: |
+          bash buildah-build/.github/install_latest_buildah.sh
+
+      - name: Install qemu dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+
+      - name: Build Image
+        id: build_image_multiplatform
+        uses: ./buildah-build/
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ env.IMAGE_TAG }}
+          platforms: ${{ env.PLATFORMS }}
+          containerfiles: |
+            ./buildah-build/fdo-rendezvous-server/image/Containerfile
+
+      - name: Echo Outputs
+        run: |
+          echo "Image: ${{ steps.build_image_multiplatform.outputs.image }}"
+          echo "Tags: ${{ steps.build_image_multiplatform.outputs.tags }}"
+          echo "Tagged Image: ${{ steps.build_image_multiplatform.outputs.image-with-tag }}"
+
+      - name: Check images created
+        run: buildah images | grep '${{ env.IMAGE_NAME }}'
+
+      - name: Check manifest
+        run: |
+          set -x
+          buildah manifest inspect ${{ steps.build_image_multiplatform.outputs.image }}:${{ env.IMAGE_TAG }}

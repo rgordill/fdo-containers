@@ -1,0 +1,13 @@
+#FROM quay.io/centos/centos:stream9-minimal
+FROM registry.fedoraproject.org/fedora-minimal:39
+
+RUN microdnf install -y fdo-rendezvous-server systemd && \
+    microdnf clean all && \
+    mkdir -p /etc/fdo/keys && \
+    mkdir -p /etc/fdo/stores/rendezvous_registered && \
+    mkdir -p /etc/fdo/stores/rendezvous_sessions && \
+    systemctl enable fdo-rendezvous-server.service
+
+# We don't include an expose, as port would be defined by the configuration
+
+CMD ["/sbin/init"]
