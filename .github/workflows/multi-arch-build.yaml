@@ -12,14 +12,16 @@ jobs:
     env:
       IMAGE_NAME: fdo-rendezvous-server
       IMAGE_TAG: latest
-      REGISTRY_ORG: quay.io/rgordill
+      REGISTRY: quay.io
+      ORG: rgordill
+      REGISTRY_USER: rgordill+github_actions
       # list of architectures for build
       PLATFORMS: linux/amd64,linux/arm64
 
-    strategy:
-      fail-fast: false
-      matrix:
-        install_latest: [ true, false ]
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     install_latest: [ true, false ]
 
     runs-on: ubuntu-latest
 
@@ -28,7 +30,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install latest buildah
-        if: matrix.install_latest
+        # if: matrix.install_latest
         run: |
           bash .github/install_latest_buildah.sh
 
@@ -60,3 +62,18 @@ jobs:
         run: |
           set -x
           buildah manifest inspect ${{ steps.build_image_multiplatform.outputs.image }}:${{ env.IMAGE_TAG }}
+
+      - name: Log in to Quay.io registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      - name: Push to GitHub Container Repository
+        id: push-to-quay
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build_image_multiplatform.outputs.image }}
+          tags: ${{ steps.build_image_multiplatform.outputs.tags }}
+          registry: ${{ env.REGISTRY }}/${{ env.ORG }}
